@@ -13,42 +13,42 @@ DIMS = (28,28,1)
 N_TRAIN_BATCHES =int(TRAIN_BUF/BATCH_SIZE)
 N_TEST_BATCHES = int(TEST_BUF/BATCH_SIZE)
 
-# Utiliza idx2numpy para cargar el archivo IDX en una matriz NumPy
-train_images = idx2numpy.convert_from_file("train-images.idx3-ubyte")
-train_labels = idx2numpy.convert_from_file("train-labels.idx1-ubyte")
-test_images = idx2numpy.convert_from_file("t10k-images.idx3-ubyte")
-test_labels = idx2numpy.convert_from_file("t10k-labels.idx1-ubyte")
-class_names = list(set(train_labels))
+def load_and_convert_data():
+    # Utiliza idx2numpy para cargar el archivo IDX en una matriz NumPy
+    train_images = idx2numpy.convert_from_file("train-images.idx3-ubyte")
+    train_labels = idx2numpy.convert_from_file("train-labels.idx1-ubyte")
+    test_images = idx2numpy.convert_from_file("t10k-images.idx3-ubyte")
+    test_labels = idx2numpy.convert_from_file("t10k-labels.idx1-ubyte")
+    class_names = list(set(train_labels))
+    return train_images, train_labels, test_images, test_labels, class_names
 
-# split dataset
-train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype(
-    "float32"
-) / 255.0
-test_images = test_images.reshape(test_images.shape[0], 28, 28, 1).astype("float32") / 255.0
+train_images, train_labels, test_images, test_labels, class_names = load_and_convert_data()
 
-# batch datasets
-train_dataset = (
-    tf.data.Dataset.from_tensor_slices(train_images)
-    .shuffle(TRAIN_BUF)
-    .batch(BATCH_SIZE)
-)
-test_dataset = (
-    tf.data.Dataset.from_tensor_slices(test_images)
-    .shuffle(TEST_BUF)
-    .batch(BATCH_SIZE)
-)
+def reshape_data(train_images, test_images):
+    # reshape dataset
+    train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype(
+        "float32"
+    ) / 255.0
+    test_images = test_images.reshape(test_images.shape[0], 28, 28, 1).astype("float32") / 255.0
+    return train_images, test_images
 
-# batch datasets
-train_dataset = (
-    tf.data.Dataset.from_tensor_slices(train_images)
-    .shuffle(TRAIN_BUF)
-    .batch(BATCH_SIZE)
-)
-test_dataset = (
-    tf.data.Dataset.from_tensor_slices(test_images)
-    .shuffle(TEST_BUF)
-    .batch(BATCH_SIZE)
-)
+train_images, test_images = reshape_data(train_images, test_images)
+
+def create_batches(train_images, test_images):
+    # batch datasets
+    train_dataset = (
+        tf.data.Dataset.from_tensor_slices(train_images)
+        .shuffle(TRAIN_BUF)
+        .batch(BATCH_SIZE)
+    )
+    test_dataset = (
+        tf.data.Dataset.from_tensor_slices(test_images)
+        .shuffle(TEST_BUF)
+        .batch(BATCH_SIZE)
+    )
+    return train_dataset, test_dataset
+
+train_dataset, test_dataset = create_batches(train_images, test_images)
 
 class GAN(tf.keras.Model):
     """ a basic GAN class 
@@ -85,23 +85,23 @@ class GAN(tf.keras.Model):
         disc_real_loss = gan_loss(logits=logits_x, is_real=True)
         # losses of fake with label "0"
         disc_fake_loss = gan_loss(logits=logits_x_gen, is_real=False)
-        disc_loss = disc_fake_loss + disc_real_loss
+        discriminator_loss = disc_fake_loss + disc_real_loss
 
         # losses of fake with label "1"
-        gen_loss = gan_loss(logits=logits_x_gen, is_real=True)
+        generator_loss = gan_loss(logits=logits_x_gen, is_real=True)
 
-        return disc_loss, gen_loss
+        return discriminator_loss, generator_loss
 
     def compute_gradients(self, x):
         """ passes through the network and computes loss
         """
         ### pass through network
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-            disc_loss, gen_loss = self.compute_loss(x)
+            discriminator_loss, generator_loss = self.compute_loss(x)
 
         # compute gradients
-        gen_gradients = gen_tape.gradient(gen_loss, self.gen.trainable_variables)
-        disc_gradients = disc_tape.gradient(disc_loss, self.disc.trainable_variables)
+        gen_gradients = gen_tape.gradient(generator_loss, self.gen.trainable_variables)
+        disc_gradients = disc_tape.gradient(discriminator_loss, self.disc.trainable_variables)
 
         return gen_gradients, disc_gradients
 
@@ -141,6 +141,9 @@ generator = [
     tf.keras.layers.Conv2DTranspose(
         filters=32, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
     ),
+    # tf.keras.layers.Conv2DTranspose(
+    #     filters=16, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
+    # ),
     tf.keras.layers.Conv2DTranspose(
         filters=1, kernel_size=3, strides=(1, 1), padding="SAME", activation="sigmoid"
     ),
@@ -148,6 +151,9 @@ generator = [
 
 discriminator = [
     tf.keras.layers.InputLayer(input_shape=DIMS),
+    # tf.keras.layers.Conv2D(
+    #     filters=16, kernel_size=3, strides=(2, 2), activation="relu"
+    # ),
     tf.keras.layers.Conv2D(
         filters=32, kernel_size=3, strides=(2, 2), activation="relu"
     ),
@@ -176,7 +182,7 @@ def plot_reconstruction(model, epoc, nex=8, zm=2):
     fig, axs = plt.subplots(ncols=nex, nrows=1, figsize=(zm * nex, zm))
     for axi in range(nex):
         axs[axi].matshow(
-            samples.numpy()[axi].squeeze(), cmap=plt.cm.Greys, vmin=0, vmax=1
+            samples.numpy()[axi].squeeze(), cmap='Greys', vmin=0, vmax=1
         )
         axs[axi].axis('off')
     if epoc in [i*10 for i in range(100)]:
@@ -184,9 +190,9 @@ def plot_reconstruction(model, epoc, nex=8, zm=2):
     plt.show()
 
     # a pandas dataframe to save the loss information to
-losses = pd.DataFrame(columns = ['disc_loss', 'gen_loss'])
+losses = pd.DataFrame(columns = ['discriminator_loss', 'generator_loss'])
 
-n_epochs = 5
+n_epochs = 51
 for epoch in range(n_epochs):
     # train
     for batch, train_x in tqdm(
@@ -203,15 +209,16 @@ for epoch in range(n_epochs):
     # plot results
     display.clear_output()
     print(
-        "Epoch: {} | disc_loss: {} | gen_loss: {}".format(
-            epoch, losses.disc_loss.values[-1], losses.gen_loss.values[-1]
+        "Epoch: {} | discriminator_loss: {} | generator_loss: {}".format(
+            epoch, losses.discriminator_loss.values[-1], losses.generator_loss.values[-1]
         )
     )
     plot_reconstruction(model,epoc=epoch)
 
-    # losses = pd.DataFrame(columns = ['disc_loss', 'gen_loss'])
-plt.plot(losses["disc_loss"].values, color='blue',label='Discriminator')
-plt.plot(losses["gen_loss"].values, color='#00008B', label='Discriminator')
+    # losses = pd.DataFrame(columns = ['discriminator_loss', 'generator_loss'])
+plt.plot(losses["discriminator_loss"].values, color='blue',label='Discriminator')
+plt.plot(losses["generator_loss"].values, color='#00008B', label='Generator')
 plt.legend()
-plt.xlabel('epoch')
+plt.xlabel('Epoch')
 plt.title('Loss')
+plt.savefig('loss_plot.png')
