@@ -25,7 +25,6 @@ def load_and_convert_data():
 train_images, train_labels, test_images, test_labels, class_names = load_and_convert_data()
 
 def reshape_data(train_images, test_images):
-    # reshape dataset
     train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype(
         "float32"
     ) / 255.0
@@ -35,7 +34,6 @@ def reshape_data(train_images, test_images):
 train_images, test_images = reshape_data(train_images, test_images)
 
 def create_batches(train_images, test_images):
-    # batch datasets
     train_dataset = (
         tf.data.Dataset.from_tensor_slices(train_images)
         .shuffle(TRAIN_BUF)
@@ -141,9 +139,6 @@ generator = [
     tf.keras.layers.Conv2DTranspose(
         filters=32, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
     ),
-    # tf.keras.layers.Conv2DTranspose(
-    #     filters=16, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
-    # ),
     tf.keras.layers.Conv2DTranspose(
         filters=1, kernel_size=3, strides=(1, 1), padding="SAME", activation="sigmoid"
     ),
@@ -151,9 +146,6 @@ generator = [
 
 discriminator = [
     tf.keras.layers.InputLayer(input_shape=DIMS),
-    # tf.keras.layers.Conv2D(
-    #     filters=16, kernel_size=3, strides=(2, 2), activation="relu"
-    # ),
     tf.keras.layers.Conv2D(
         filters=32, kernel_size=3, strides=(2, 2), activation="relu"
     ),
@@ -164,10 +156,8 @@ discriminator = [
     tf.keras.layers.Dense(units=1, activation=None),
 ]
 
-# optimizers
 gen_optimizer = tf.keras.optimizers.Adam(0.001, beta_1=0.5)
-disc_optimizer = tf.keras.optimizers.RMSprop(0.005)# train the model
-# model
+disc_optimizer = tf.keras.optimizers.RMSprop(0.005)
 model = GAN(
     gen = generator,
     disc = discriminator,
@@ -187,9 +177,7 @@ def plot_reconstruction(model, epoc, nex=8, zm=2):
         axs[axi].axis('off')
     if epoc in [i*10 for i in range(100)]:
         plt.savefig(f'GAN/generated_{epoc}.png')
-    # plt.show()
 
-    # a pandas dataframe to save the loss information to
 losses = pd.DataFrame(columns = ['discriminator_loss', 'generator_loss'])
 
 n_epochs = 51
@@ -215,7 +203,6 @@ for epoch in range(n_epochs):
     )
     plot_reconstruction(model,epoc=epoch)
 
-    # losses = pd.DataFrame(columns = ['discriminator_loss', 'generator_loss'])
 plt.plot(losses["discriminator_loss"].values, color='red',label='Discriminator')
 plt.plot(losses["generator_loss"].values, color='blue', label='Generator')
 plt.legend()
