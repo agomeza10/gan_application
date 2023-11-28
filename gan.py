@@ -187,7 +187,7 @@ def plot_reconstruction(model, epoc, nex=8, zm=2):
         axs[axi].axis('off')
     if epoc in [i*10 for i in range(100)]:
         plt.savefig(f'GAN/generated_{epoc}.png')
-    plt.show()
+    # plt.show()
 
     # a pandas dataframe to save the loss information to
 losses = pd.DataFrame(columns = ['discriminator_loss', 'generator_loss'])
@@ -216,8 +216,8 @@ for epoch in range(n_epochs):
     plot_reconstruction(model,epoc=epoch)
 
     # losses = pd.DataFrame(columns = ['discriminator_loss', 'generator_loss'])
-plt.plot(losses["discriminator_loss"].values, color='blue',label='Discriminator')
-plt.plot(losses["generator_loss"].values, color='#00008B', label='Generator')
+plt.plot(losses["discriminator_loss"].values, color='red',label='Discriminator')
+plt.plot(losses["generator_loss"].values, color='blue', label='Generator')
 plt.legend()
 plt.xlabel('Epoch')
 plt.title('Loss')
